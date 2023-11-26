@@ -1,10 +1,13 @@
+import json
 import os
 
 import telebot
-from telebot import types
 
 import db.db_init as dbmanager
-from util.utils import get_personal_data_menu, get_main_menu, START, HELP, MAIN_MENU, PERSONAL_DATA_MENU, SUPPORT
+from models.User import User
+from service.user_service import UserService
+from util.utils import get_personal_data_menu, get_main_menu, START, HELP, MAIN_MENU, PERSONAL_DATA_MENU, SUPPORT, \
+    CREATE_PERS_DATA, get_simple_question_marcup, EDIT_GENDER, get_simple_question_marcup_with_text
 
 # Ініціалізація телеграм бот об'єкту
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'), parse_mode='Markdown')
@@ -34,15 +37,36 @@ def main_menu(message):
 
 @bot.message_handler(commands=[PERSONAL_DATA_MENU])
 def personal_data_menu(message):
-    bot.send_message(message.chat.id, 'Оберіть дію з персональними даними', reply_markup=get_personal_data_menu(message.chat.id))
+    user = UserService.get_user_by_id(User(id=message.chat.id))
+    if user is None:
+        bot.send_message(message.chat.id, 'Ви можете зберегти персональні дані, щоб не вводити їх при наступній купівлі квитків📥',
+                         reply_markup=get_personal_data_menu(False))
+    else:
+        bot.send_message(message.chat.id, 'Оберіть дію з персональними даними:',
+                         reply_markup=get_personal_data_menu(True))
 
 
-@bot.callback_query_handler(func= lambda callback: callback.data == PERSONAL_DATA_MENU)
+@bot.callback_query_handler(func=lambda callback: callback.data == PERSONAL_DATA_MENU)
 def personal_data_callback(callback):
     personal_data_menu(callback.message)
 
 
-@bot.callback_query_handler(func= lambda callback: callback.data == SUPPORT)
+@bot.callback_query_handler(func=lambda callback: callback.data == CREATE_PERS_DATA)
+def create_pers_data_callback(callback):
+    bot.send_message(callback.message.chat.id, 'Оберіть, будь ласка, стать:',
+                     reply_markup=get_simple_question_marcup_with_text(json.dumps({'cmd': EDIT_GENDER, 'val': 'M'}),
+                                                                       'Чоловіча👨‍💼',
+                                                                       json.dumps({'cmd': EDIT_GENDER, 'val': 'F'}),
+                                                                       'Жіноча👩‍💼'))
+
+
+@bot.callback_query_handler(func=lambda callback: json.loads(callback.data)['cmd'] == EDIT_GENDER)
+def edit_gender_callback(callback):
+    value = json.loads(callback.data)['val']
+    bot.send_message(callback.message.chat.id, value)
+
+
+@bot.callback_query_handler(func=lambda callback: callback.data == SUPPORT)
 def support_callback(callback):
     bot.send_message(callback.message.chat.id, 'Залишились питання?\n'
                                                'Зателефонуйте оператору за номером:\n'
