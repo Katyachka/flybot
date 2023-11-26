@@ -22,7 +22,7 @@ def init_db():
 
     cursor.execute('CREATE TABLE IF NOT EXISTS users ('
                    'id INTEGER PRIMARY KEY NOT NULL,'
-                   'userInfoId INTEGER NOT NULL REFERENCES userinfo(id),'
+                   'userInfoId INTEGER REFERENCES userinfo(id),'
                    'save_info BOOLEAN'
                    ')')
 
