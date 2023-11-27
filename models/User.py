@@ -5,6 +5,7 @@ class User:
         self.user_info_id = user_info_id
         self.save_info = save_info
 
+    # Створення об'єкту класу User за допомогою даних з таблиці users в бд
     @staticmethod
     def from_tuple(user: tuple):
         if user is None:

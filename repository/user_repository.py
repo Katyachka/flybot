@@ -4,6 +4,7 @@ from db.db_init import DB_NAME
 from models.User import User
 
 
+# Додавання даних юзера в таблицю бази даних users
 class UserRepository:
 
     @staticmethod
@@ -20,6 +21,7 @@ class UserRepository:
         cursor.close()
         conn.close()
 
+# Отримання даних з таблиці users
     @staticmethod
     def get_user_by_id(user_id):
         conn = sqlite3.connect(DB_NAME)
@@ -32,6 +34,7 @@ class UserRepository:
         conn.close()
         return User.from_tuple(user)
 
+# Оновлення даних в таблиці Users
     @staticmethod
     def update_user(user: User):
         conn = sqlite3.connect(DB_NAME)
@@ -46,6 +49,7 @@ class UserRepository:
         cursor.close()
         conn.close()
 
+# Видалення ланих з таблиці users
     @staticmethod
     def delete_user(user_id):
         conn = sqlite3.connect(DB_NAME)

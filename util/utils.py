@@ -27,6 +27,7 @@ def get_simple_question_marcup(yes_data, no_data):
     return reply_markup
 
 
+# Повертає розмітку з кнопками для реплаю з 2 варінтами відповіді
 def get_simple_question_marcup_with_text(yes_data, yes_text, no_data, no_text):
     reply_markup = types.InlineKeyboardMarkup()
     yes = types.InlineKeyboardButton(yes_text, callback_data=yes_data)
@@ -42,11 +43,14 @@ def get_personal_data_menu(has_personal_data):
     edit = types.InlineKeyboardButton('Редагувати✍️', callback_data=EDIT_PERS_DATA)
     see = types.InlineKeyboardButton('Переглянути👀', callback_data=SEE_PERS_DATA)
     delete = types.InlineKeyboardButton('Видалити🗑', callback_data=REM_PERS_DATA)
+    back = types.InlineKeyboardButton('До головного меню◀️', callback_data=MAIN_MENU)
     if has_personal_data:
         reply_markup.row(edit, see)
         reply_markup.row(delete)
+        reply_markup.row(back)
     else:
         reply_markup.row(create)
+        reply_markup.row(back)
     return reply_markup
 
 
