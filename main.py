@@ -12,7 +12,7 @@ from service.user_info_service import UserInfoService
 from service.user_service import UserService
 from util.utils import get_personal_data_menu, get_main_menu, START, HELP, MAIN_MENU, PERSONAL_DATA_MENU, SUPPORT, \
     CREATE_PERS_DATA, get_simple_question_marcup, EDIT_GENDER, get_simple_question_marcup_with_text, \
-    get_save_pers_data_menu, SAVE_PERS_DATA, get_param_from_command
+    get_save_pers_data_menu, SAVE_PERS_DATA, get_param_from_command, SEE_PERS_DATA
 
 # Ініціалізація телеграм бот об'єкту
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'), parse_mode='Markdown')
@@ -203,6 +203,18 @@ def save_pers_info_callback(callback):
     bot.send_message(callback.message.chat.id, "Ваші персональні дані успішно збережені. 🎉🎉🎉")
     time.sleep(2)
     main_menu(callback.message)
+
+
+@bot.callback_query_handler(func=lambda callback: callback.data == SEE_PERS_DATA)
+def see_personal_data_callback(callback):
+    user = UserService.get_user_by_id(callback.message.chat.id)
+    user_info = UserInfoService.get_user_by_id(user.user_info_id)
+    bot.send_message(callback.message.chat.id, "*Ваші персональні дані:*\n\n"
+                                               f"*Ім'я*: {user_info.name}\n"
+                                               f"*Прізвище*: {user_info.surname}\n\n"
+                                               f"*Стать*: {GENDER[user_info.gender]}\n\n"
+                                               f"*Номер телефону*: {user_info.phone}\n"
+                                               f"*Email*: {user_info.email}")
 
 
 @bot.callback_query_handler(func=lambda callback: callback.data == SUPPORT)

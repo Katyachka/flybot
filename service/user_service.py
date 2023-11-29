@@ -11,8 +11,8 @@ class UserService:
 
     # Отримання даних з таблиці users
     @staticmethod
-    def get_user_by_id(user: User):
-        return UserRepository.get_user_by_id(user.id)
+    def get_user_by_id(user_id):
+        return UserRepository.get_user_by_id(user_id)
 
     # Оновлення даних в таблиці Users, при відсутності працює як create
     @staticmethod
