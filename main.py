@@ -1,19 +1,35 @@
 import json
 import os
+import re
+import time
 
 import telebot
-
 import db.db_init as dbmanager
+
+from models.UserInfo import UserInfo
 from models.User import User
+from service.user_info_service import UserInfoService
 from service.user_service import UserService
 from util.utils import get_personal_data_menu, get_main_menu, START, HELP, MAIN_MENU, PERSONAL_DATA_MENU, SUPPORT, \
-    CREATE_PERS_DATA, get_simple_question_marcup, EDIT_GENDER, get_simple_question_marcup_with_text
+    CREATE_PERS_DATA, get_simple_question_marcup, EDIT_GENDER, get_simple_question_marcup_with_text, \
+    get_save_pers_data_menu, SAVE_PERS_DATA, get_param_from_command
 
 # Ініціалізація телеграм бот об'єкту
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'), parse_mode='Markdown')
 
 # Ініціалізація бази даних
 dbmanager.init_db()
+
+personal_data = {}
+
+user_surname_regex = "[0-9!@#$%^&()_+=\*\-~`{}\[\]:;\",\.?/\\|<>№]+"
+phone_regex = "[a-zA-Zа-яА-ЯІіЇїЄ!@#$%^&()_=\*\-~'`{}\[\]:;\",\.?/\\|<>№]+"
+email_regex = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"
+
+GENDER = {
+    'M': 'Чоловік',
+    'F': 'Жінка'
+}
 
 
 # Повертає повідомлення з привітанням після команди start
@@ -28,8 +44,8 @@ def send_welcome(message):
 @bot.message_handler(commands=[HELP])
 def send_help(message):
     bot.send_message(message.chat.id, 'Цей бот містить такі команди: \n'
-                                            '/start - почати використовувати бот\n'
-                                            '/help - перелік команд, які містить в собі бот\n')
+                                      '/start - почати використовувати бот\n'
+                                      '/help - перелік команд, які містить в собі бот\n')
 
 
 # Повертає повідомлення з кнопками головного меню
@@ -67,20 +83,128 @@ def personal_data_callback(callback):
 @bot.callback_query_handler(func=lambda callback: callback.data == CREATE_PERS_DATA)
 def create_pers_data_callback(callback):
     bot.send_message(callback.message.chat.id, 'Оберіть, будь ласка, стать:',
-                     reply_markup=get_simple_question_marcup_with_text(json.dumps({'cmd': EDIT_GENDER, 'val': 'M'}),
-                                                                       'Чоловіча👨‍💼',
-                                                                       json.dumps({'cmd': EDIT_GENDER, 'val': 'F'}),
-                                                                       'Жіноча👩‍💼'))
+                     reply_markup=get_simple_question_marcup_with_text(EDIT_GENDER + ":M",'Чоловіча👨‍💼',
+                                                                       EDIT_GENDER + ":F", 'Жіноча👩‍💼'))
 
 
-# Повертає повідомлення з обраною статтю
-@bot.callback_query_handler(func=lambda callback: json.loads(callback.data)['cmd'] == EDIT_GENDER)
+#
+@bot.callback_query_handler(func=lambda callback: callback.data.startswith(EDIT_GENDER))
 def edit_gender_callback(callback):
-    value = json.loads(callback.data)['val']
-    bot.send_message(callback.message.chat.id, value)
+    gender = get_param_from_command(callback.data)
+    bot.send_message(callback.message.chat.id, 'Введіть Ваше ім\'я:')
+    user_info = UserInfo(gender=gender)
+    personal_data[callback.message.chat.id] = user_info
+    bot.clear_step_handler_by_chat_id(callback.message.chat.id)
+    bot.register_next_step_handler(callback.message, on_enter_name)
 
 
-# Повертає повідомлення з даних служби підтримки після вибору команди support
+def on_enter_name(message):
+    name = message.text
+    user_info = personal_data[message.chat.id]
+
+    if len(name) < 2:
+        bot.send_message(message.chat.id, 'Ім\'я повинно складатися хоча б з двох літер. '
+                                          'Спробуйте, будь ласка, ще раз:')
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.register_next_step_handler(message, on_enter_name)
+        return
+
+    if re.search(user_surname_regex, name):
+        bot.send_message(message.chat.id, 'Ім\'я не повинно містити цифри та спеціальні символи, окрім апострофу. '
+                                          'Спробуйте, будь ласка, ще раз:')
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.register_next_step_handler(message, on_enter_name)
+        return
+
+    user_info.name = name
+    personal_data[message.chat.id] = user_info
+    bot.send_message(message.chat.id, 'Введіть Ваше прізвище:')
+    bot.clear_step_handler_by_chat_id(message.chat.id)
+    bot.register_next_step_handler(message, on_enter_surname)
+
+
+def on_enter_surname(message):
+    surname = message.text
+    user_info = personal_data[message.chat.id]
+
+    if len(surname) < 4:
+        bot.send_message(message.chat.id, 'Прізвище повинно складатися хоча б з 4 літер. '
+                                          'Спробуйте, будь ласка, ще раз:')
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.register_next_step_handler(message, on_enter_surname)
+        return
+
+    if re.search(user_surname_regex, surname):
+        bot.send_message(message.chat.id, 'Прізвище не повинно містити цифри та спеціальні символи, окрім апострофу. '
+                                          'Спробуйте, будь ласка, ще раз:')
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.register_next_step_handler(message, on_enter_surname)
+        return
+
+    user_info.surname = surname
+    personal_data[message.chat.id] = user_info
+    bot.send_message(message.chat.id, 'Введіть Ваш номер телефону в міжнародному форматі (+380):')
+    bot.clear_step_handler_by_chat_id(message.chat.id)
+    bot.register_next_step_handler(message, on_enter_phone_number)
+
+
+def on_enter_phone_number(message):
+    phone = message.text
+    user_info = personal_data[message.chat.id]
+
+    if len(phone) != 13:
+        bot.send_message(message.chat.id, 'Номер телефону повинен складатися з 12 цифр та одного символу +. '
+                                          'Спробуйте, будь ласка, ще раз:')
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.register_next_step_handler(message, on_enter_phone_number)
+        return
+
+    if re.search(phone_regex, phone):
+        bot.send_message(message.chat.id, 'Номер телефону не повинен містити літер або спеціальних символів, окрім +. '
+                                          'Спробуйте, будь ласка, ще раз:')
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.register_next_step_handler(message, on_enter_phone_number)
+        return
+
+    user_info.phone = phone
+    personal_data[message.chat.id] = user_info
+    bot.send_message(message.chat.id, 'Введіть Ваш email:')
+    bot.clear_step_handler_by_chat_id(message.chat.id)
+    bot.register_next_step_handler(message, on_enter_email)
+
+
+def on_enter_email(message):
+    email = message.text
+    user_info = personal_data[message.chat.id]
+
+    if re.search(email_regex, email):
+        user_info.email = email
+        personal_data[message.chat.id] = user_info
+        bot.send_message(message.chat.id, 'Ви ввели наступні дані:\n')
+        bot.send_message(message.chat.id, f"*Ім'я*: {user_info.name}\n"
+                                          f"*Прізвище*: {user_info.surname}\n\n"
+                                          f"*Стать*: {GENDER[user_info.gender]}\n\n"
+                                          f"*Номер телефону*: {user_info.phone}\n"
+                                          f"*Email*: {user_info.email}")
+        bot.send_message(message.chat.id, 'Оберіть дію: ', reply_markup=get_save_pers_data_menu())
+    else:
+        bot.send_message(message.chat.id, 'Не валідний email. Спробуйте, будь ласка, ще раз:')
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.register_next_step_handler(message, on_enter_email, user_info)
+
+
+@bot.callback_query_handler(func=lambda callback: callback.data == SAVE_PERS_DATA)
+def save_pers_info_callback(callback):
+    user_info = personal_data[callback.message.chat.id]
+    id = UserInfoService.create_user(user_info)
+    del personal_data[callback.message.chat.id]
+    user = User(id=callback.message.chat.id, user_info_id=id, save_info=True)
+    UserService.create_user(user)
+    bot.send_message(callback.message.chat.id, "Ваші персональні дані успішно збережені. 🎉🎉🎉")
+    time.sleep(2)
+    main_menu(callback.message)
+
+
 @bot.callback_query_handler(func=lambda callback: callback.data == SUPPORT)
 def support_callback(callback):
     bot.send_message(callback.message.chat.id, 'Залишились питання?\n'

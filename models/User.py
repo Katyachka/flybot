@@ -1,3 +1,6 @@
+import json
+
+
 class User:
 
     def __init__(self, id=None, user_info_id=None, save_info=False):

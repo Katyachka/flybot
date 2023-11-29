@@ -1,4 +1,3 @@
-import json
 
 from telebot import types
 
@@ -16,6 +15,12 @@ EDIT_PERS_DATA = 'edit_pers_data'
 SEE_PERS_DATA = 'see_pers_data'
 REM_PERS_DATA = 'rem_pers_data'
 EDIT_GENDER = 'edit_gender'
+SAVE_PERS_DATA = 'save_pers_data'
+PRE_SAVE_EDIT_PERS_DATA = 'pre_save_edit_pers_data'
+
+
+CMD = 'cmd'
+DATA = 'data'
 
 
 # Повертає розмітку з кнопками для реплаю з відповіддю так чи ні
@@ -33,6 +38,16 @@ def get_simple_question_marcup_with_text(yes_data, yes_text, no_data, no_text):
     yes = types.InlineKeyboardButton(yes_text, callback_data=yes_data)
     no = types.InlineKeyboardButton(no_text, callback_data=no_data)
     reply_markup.row(yes, no)
+    return reply_markup
+
+
+def get_save_pers_data_menu():
+    reply_markup = types.InlineKeyboardMarkup()
+    save = types.InlineKeyboardButton('Зберегти💾', callback_data=SAVE_PERS_DATA)
+    edit = types.InlineKeyboardButton('Редагувати✍️', callback_data=EDIT_PERS_DATA)
+    cancel = types.InlineKeyboardButton('Відмінити❌', callback_data=MAIN_MENU)
+    reply_markup.row(save, edit)
+    reply_markup.row(cancel)
     return reply_markup
 
 
@@ -67,3 +82,8 @@ def get_main_menu():
     reply_markup.row(pers_data)
     reply_markup.row(support)
     return reply_markup
+
+
+def get_param_from_command(command):
+    path = command.split(':')
+    return path[len(path) - 1]
