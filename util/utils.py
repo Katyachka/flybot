@@ -14,13 +14,25 @@ CREATE_PERS_DATA = 'create_pers_data'
 EDIT_PERS_DATA = 'edit_pers_data'
 SEE_PERS_DATA = 'see_pers_data'
 REM_PERS_DATA = 'rem_pers_data'
+EDIT_NAME = 'pers_data_edit_name'
+EDIT_SURNAME = 'pers_data_edit_surname'
+EDIT_PERS_GENDER = 'pers_data_edit_gender'
+EDIT_PHONE = 'pers_data_edit_phone'
+EDIT_EMAIL = 'pers_data_edit_email'
 EDIT_GENDER = 'edit_gender'
+EDIT_GENDER_INTERNAL = "change_gender"
 SAVE_PERS_DATA = 'save_pers_data'
 PRE_SAVE_EDIT_PERS_DATA = 'pre_save_edit_pers_data'
 
 
 CMD = 'cmd'
 DATA = 'data'
+
+FIELD_NAME = "name"
+FIELD_SURNAME = "surname"
+FIELD_GENDER = "gender"
+FIELD_PHONE = "phone"
+FIELD_EMAIL = "email"
 
 
 # Повертає розмітку з кнопками для реплаю з відповіддю так чи ні
@@ -81,6 +93,25 @@ def get_main_menu():
     reply_markup.row(tickets)
     reply_markup.row(pers_data)
     reply_markup.row(support)
+    return reply_markup
+
+
+def get_edit_personal_data_menu(flag):
+    reply_markup = types.InlineKeyboardMarkup()
+    name = types.InlineKeyboardButton('Ім\'я', callback_data=EDIT_NAME)
+    surname = types.InlineKeyboardButton('Прізвище', callback_data=EDIT_SURNAME)
+    gender = types.InlineKeyboardButton('Стать', callback_data=EDIT_PERS_GENDER)
+    phone = types.InlineKeyboardButton('Номер телефону', callback_data=EDIT_PHONE)
+    email = types.InlineKeyboardButton('Email', callback_data=EDIT_EMAIL)
+    back_to_personal_menu = types.InlineKeyboardButton('Назад◀️', callback_data=PERSONAL_DATA_MENU)
+    back_to_personal_save_menu = types.InlineKeyboardButton('Назад◀️', callback_data=PRE_SAVE_EDIT_PERS_DATA)
+    reply_markup.row(name, surname)
+    reply_markup.row(gender, phone)
+    reply_markup.row(email)
+    if flag:
+        reply_markup.row(back_to_personal_menu)
+    else:
+        reply_markup.row(back_to_personal_save_menu)
     return reply_markup
 
 
