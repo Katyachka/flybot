@@ -1,5 +1,4 @@
 import os
-import os
 import re
 import time
 
@@ -25,7 +24,6 @@ dbmanager.init_db()
 personal_data = {}
 message_to_edit = {}
 messages_to_delete = {}
-
 
 
 user_surname_regex = "[0-9!@#$%^&()_+=\*\-~`{}\[\]:;\",\.?/\\|<>№]+"
