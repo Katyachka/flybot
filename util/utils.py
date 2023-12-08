@@ -1,6 +1,13 @@
+import os
+import random
+from math import ceil
 
 from telebot import types
 
+from models.Flight import Flight
+from models.FlightModel import FlightModel
+from models.Seat import Seat
+from service.seat_service import SeatService
 
 # Константи з командами
 START = 'start'
@@ -23,10 +30,19 @@ EDIT_GENDER = 'edit_gender'
 EDIT_GENDER_INTERNAL = "change_gender"
 SAVE_PERS_DATA = 'save_pers_data'
 PRE_SAVE_EDIT_PERS_DATA = 'pre_save_edit_pers_data'
-
+FLIGHT = 'flight'
+LUGGAGE = 'luggage'
+CHOOSE_SEAT = 'choose_seat'
+SEAT_PAG = "pag_seats"
+PAY = "pay"
 
 CMD = 'cmd'
 DATA = 'data'
+
+OCCUPIED = "occupied"
+
+NEXT = "++"
+PREV = "--"
 
 FIELD_NAME = "name"
 FIELD_SURNAME = "surname"
@@ -115,6 +131,82 @@ def get_edit_personal_data_menu(flag):
     return reply_markup
 
 
+def get_available_flights_menu(available_flight, with_dates):
+    reply_markup = types.InlineKeyboardMarkup()
+    for flight in available_flight:
+        reply_markup.row(types.InlineKeyboardButton(f"{get_flight_btn_text(flight, with_dates)}",
+                                                    callback_data=f"{FLIGHT}:{flight.id}"))
+    return reply_markup
+
+
+def get_flight_btn_text(flight: Flight, with_date):
+    if with_date:
+        text = f"{flight.departure_date_time.strftime("%d.%m.%Y (%H:%M)")} -> {flight.arrival_date_time.strftime("%d.%m.%Y (%H:%M)")}"
+    else:
+        dep_time = f"{flight.departure_date_time.hour}:{flight.departure_date_time.minute}"
+        arr_time = f"{flight.arrival_date_time.hour}:{flight.arrival_date_time.minute}"
+        text = f"{dep_time} -> {arr_time}"
+    return text
+
+
+def get_pay_button(cost, payment_url):
+    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup.add(types.InlineKeyboardButton(f'Оплатити: {cost}$', url=payment_url))
+    return reply_markup
+
+
+def get_luggage_menu(flight: Flight):
+    reply_markup = types.InlineKeyboardMarkup()
+    base = types.InlineKeyboardButton(f'Basic - {flight.cost_base}$', callback_data=f"{LUGGAGE}:BASE")
+    regular = types.InlineKeyboardButton(f'Regular - {flight.cost_base}$ + {flight.cost_regular}$',
+                                         callback_data=f"{LUGGAGE}:REGULAR")
+    plus = types.InlineKeyboardButton(f'Plus - {flight.cost_base}$ + {flight.cost_plus}$',
+                                      callback_data=f"{LUGGAGE}:PLUS")
+    reply_markup.row(base, regular)
+    reply_markup.row(plus)
+    return reply_markup
+
+
 def get_param_from_command(command):
     path = command.split(':')
     return path[len(path) - 1]
+
+
+def load_photo(filename):
+    relative_photo_path = f'./layout/{filename}'
+
+    absolute_photo_path = os.path.abspath(relative_photo_path)
+
+    if os.path.exists(absolute_photo_path):
+        return open(absolute_photo_path, 'rb')
+    else:
+        return None
+
+
+def generate_seats(flight: FlightModel):
+    result = []
+    letters = ['A', 'B', 'C', 'D', 'E', 'F']
+    seats = SeatService.get_all_by_flight_id(flight.id)
+    for i in range(ceil(flight.plane.passengers / flight.plane.seat_in_row)):
+        for letter in letters:
+            number = f"{i + 1}{letter}"
+            if any(val.number == number for val in seats):
+                number = f"{number} (вже зайняте)"
+            seat = Seat(flight_id=flight.id, number=number)
+            result.append(seat)
+    return result
+
+
+def get_random_available_seat(flight: FlightModel):
+    result = []
+    letters = ['A', 'B', 'C', 'D', 'E', 'F']
+    seats = SeatService.get_all_by_flight_id(flight.id)
+    for i in range(ceil(flight.plane.passengers / flight.plane.seat_in_row)):
+        for letter in letters:
+            number = f"{i}{letter}"
+            if any(val.number == number for val in seats):
+                continue
+            seat = Seat(flight_id=flight.id, number=number)
+            result.append(seat)
+    seat_index = random.randint(0, len(result) - 1)
+    return result[seat_index]

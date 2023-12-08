@@ -88,7 +88,7 @@ cost_base = {
 
 # Ініціалізація бази даних
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
     cursor = conn.cursor()
 
     cursor.execute('CREATE TABLE IF NOT EXISTS userinfo ('
@@ -110,7 +110,8 @@ def init_db():
                    'id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
                    'model varchar(100) NOT NULL,'
                    'passengers INTEGER NOT NULL,'
-                   'layout varchar NOT NULL'
+                   'layout varchar NOT NULL,'
+                   'seatInRow INTEGER NOT NULL'
                    ')')
 
     cursor.execute('CREATE TABLE IF NOT EXISTS flight ('
@@ -118,10 +119,10 @@ def init_db():
                    'planeId INTEGER NOT NULL REFERENCES plane(id),'
                    'departure varchar(100) NOT NULL,'
                    'arrival varchar(100) NOT NULL,'
-                   'departure_date_time DATETIME NOT NULL,'
-                   'arrival_date_time DATATIME NOT NULL,'
-                   'duration FLOAT NOT NULL,'
-                   'cost_base FLOAT NOT NULL,'
+                   'departure_date_time INTEGER NOT NULL,'
+                   'arrival_date_time INTEGER NOT NULL,'
+                   'duration REAL NOT NULL,'
+                   'cost_base REAL NOT NULL,'
                    'cost_regular FLOAT NOT NULL,'
                    'cost_plus FLOAT NOT NULL' 
                    ')')
@@ -130,7 +131,9 @@ def init_db():
                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
                    "number varchar(10) NOT NULL,"
                    "userInfoId INTEGER NOT NULL REFERENCES userinfo(id),"
-                   "flightId INTEGER NOT NULL REFERENCES flight(id)"
+                   "flightId INTEGER NOT NULL REFERENCES flight(id),"
+                   "luggage_regular BOOLEAN,"
+                   "luggage_plus BOOLEAN"
                    ")")
 
     cursor.execute('CREATE TABLE IF NOT EXISTS ticket ('
@@ -156,7 +159,7 @@ def init_db():
 
 
 def fill_planes():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM plane')
@@ -164,45 +167,45 @@ def fill_planes():
     all = cursor.fetchall()
 
     if not all:
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Boing 737 800", 189, "boing_737_800.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Boeing 737 800", 186, "boeing_737_800.jpg", 6))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Airbus A320", 180, "airbus_a320.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Airbus A320", 150, "airbus_a320.jpg", 6))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Cessna 172", 4, "cessna_172.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Cessna 172", 3, "cessna_172.jpg", 2))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Boing 737 800", 189, "boing_737_800.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Boeing 737 800", 186, "boeing_737_800.jpg", 6))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Airbus A320", 180, "airbus_a320.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Airbus A320", 150, "airbus_a320.jpg", 6))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Cessna 172", 4, "cessna_172.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Cessna 172", 3, "cessna_172.jpg", 2))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Boing 737 800", 189, "boing_737_800.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Boeing 737 800", 186, "boeing_737_800.jpg", 6))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Airbus A320", 180, "airbus_a320.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Airbus A320", 150, "airbus_a320.jpg", 6))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Cessna 172", 4, "cessna_172.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Cessna 172", 3, "cessna_172.jpg", 3))
 
-        cursor.execute(f'INSERT INTO plane (model, passengers, layout) '
-                       f'VALUES (?, ?, ?)',
-                       ("Airbus A320", 180, "airbus_a320.png"))
+        cursor.execute(f'INSERT INTO plane (model, passengers, layout, seatInRow) '
+                       f'VALUES (?, ?, ?, ?)',
+                       ("Airbus A320", 150, "airbus_a320.jpg", 6))
 
         conn.commit()
 
@@ -211,8 +214,7 @@ def fill_planes():
 
 
 def fill_flight():
-    minutes = int(Decimal(f"{Decimal(f"{duration[1]}") - int(duration[1])}") * 100)
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM flight')
@@ -230,8 +232,8 @@ def fill_flight():
             cursor.execute(f'INSERT INTO flight (planeId, departure, arrival, departure_date_time, arrival_date_time,'
                            f'duration, cost_base, cost_regular, cost_plus) '
                        f'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                       (plane.id, departure[index], arrival[index], departure_date_time[index], arrival_date_time[index],
-                        duration[index], cost_base[index], 15, 25))
+                       (plane.id, departure[index], arrival[index], int(departure_date_time[index].timestamp()),
+                        int(arrival_date_time[index].timestamp()), duration[index], cost_base[index], 15, 25))
             index += 1
 
         conn.commit()
