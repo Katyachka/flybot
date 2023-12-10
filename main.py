@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import uuid
 
 import telebot
 from telebot.types import LabeledPrice
@@ -13,7 +14,7 @@ from models.SeatModel import SeatModel
 from models.Ticket import Ticket
 from models.User import User
 from models.UserInfo import UserInfo
-from models.choose_seat_state import ChooseSeatState
+from service.choose_seat_state import ChooseSeatState
 from service.ticket_service import TicketService
 from service.chat_cache import ChatCache
 from service.flight_service import FlightService
@@ -54,6 +55,8 @@ GENDER = {
 def send_welcome(message):
     bot.send_message(message.chat.id, f'{message.chat.first_name}, вітаємо Вас у Flying бот. Цей бот допоможе Вам '
                                       f'придбати авіаквитки✈️')
+    user = User(id=message.chat.id, save_info=False)
+    UserService.create_user(user)
     main_menu(message)
 
 
@@ -221,8 +224,10 @@ def save_pers_info_callback(callback):
         user_info = chat_cache.get_pers_data(callback.message.chat.id)
         id = UserInfoService.create_user(user_info)
         chat_cache.rem_pers_data(callback.message.chat.id)
-        user = User(id=callback.message.chat.id, user_info_id=id, save_info=True)
-        UserService.create_user(user)
+        user = UserService.get_user_by_id(callback.message.chat.id)
+        user.user_info_id = id
+        user.save_info = True
+        UserService.update_user(user)
         bot.send_message(callback.message.chat.id, "Ваші персональні дані успішно збережені. 🎉🎉🎉")
         time.sleep(2)
         main_menu(callback.message)
@@ -666,7 +671,8 @@ def got_payment(message):
     seat = chat_cache.get_seat(message.chat.id)
     flight = chat_cache.get_flight(message.chat.id)
     seat.id = SeatService.create_seat(seat)
-    ticket = Ticket(plane_id=flight.plane.id, flight_id=flight.id, seat_id=seat.id)
+    ticket = Ticket(plane_id=flight.plane.id, flight_id=flight.id, seat_id=seat.id, reserve_number=uuid.uuid4())
+    user_info = UserInfoService.get_user_by_id(seat.user_info_id)
     ticket.id = TicketService.create_ticket(ticket)
     user = UserService.get_user_by_id(message.chat.id)
     UserTicketService.create_user_ticket(user, ticket)
@@ -677,10 +683,27 @@ def got_payment(message):
     chat_cache.put_msg_to_edit(message.chat.id, None)
 
     bot.send_message(message.chat.id,
-                     "Дякуємо за оплату! Ми виконаємо ваше замовлення на `{} {}` якомога швидше! "
-                      "Залишайтеся на зв’язку.".format(
+                     "Дякуємо за оплату! Ваше замовлення на `{} {}` успішно оплачено!".format(
                          message.successful_payment.total_amount / 100, message.successful_payment.currency),
                      parse_mode='Markdown')
+
+    luggage = 'Ручна поклажа'
+
+    if seat.luggage_regular:
+        luggage = '2 сумки ручної поклажі (1 сумка ручної поклажі та одна маленька сумка)'
+
+    if seat.luggage_plus:
+        luggage = '1 маленька сумка + 20 кг багаж'
+
+    bot.send_message(message.chat.id, f"Ваш номер резервації: `{ticket.reserve_number}`\n\n"
+                                      f"Рейс: {flight.departure} -> {flight.arrival}\n\n"
+                                      f"Дата та час відправлення: {flight.departure_date_time.strftime("%d.%m.%Y %H:%M")}\n"
+                                      f"Дата та час прибуття: {flight.arrival_date_time.strftime("%d.%m.%Y %H:%M")}\n"
+                                      f"Тривалість польоту: {flight.duration} год.\n\n"
+                                      f"Літак: {flight.plane.model}\n\n"
+                                      f"Ваше місце: {seat.number}\n"
+                                      f"Багаж: {luggage}\n\n"
+                                      f"Пасажир: {user_info.name} {user_info.surname}\n")
 
 
 @bot.message_handler(commands=[TICKETS])

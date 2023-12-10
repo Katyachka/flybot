@@ -17,7 +17,7 @@ class UserService:
     # Оновлення даних в таблиці Users, при відсутності працює як create
     @staticmethod
     def update_user(user: User):
-        db_user = UserService.get_user_by_id(user)
+        db_user = UserService.get_user_by_id(user.id)
         if db_user is None:
             UserService.create_user(user)
         else:

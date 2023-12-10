@@ -140,7 +140,8 @@ def init_db():
                    'id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
                    'flightId INTEGER NOT NULL REFERENCES flight(id),'
                    'planeId INTEGER NOT NULL REFERENCES plane(id),'
-                   'seatId INTEGER NOT NULL REFERENCES seat(id)'
+                   'seatId INTEGER NOT NULL REFERENCES seat(id),'
+                   'reserveNumber varchar(100) NOT NULL'
                    ')')
 
     cursor.execute('CREATE TABLE IF NOT EXISTS user_ticket ('
