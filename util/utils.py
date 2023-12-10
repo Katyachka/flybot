@@ -7,6 +7,7 @@ from telebot import types
 from models.Flight import Flight
 from models.FlightModel import FlightModel
 from models.Seat import Seat
+from service.flight_service import FlightService
 from service.seat_service import SeatService
 
 # Константи з командами
@@ -16,6 +17,7 @@ PERSONAL_DATA_MENU = 'pers_data_menu'
 MAIN_MENU = 'main_menu'
 CHOOSE_FLIGHT = 'choose_flight'
 TICKETS = 'tickets'
+TICKET = 'my_ticket'
 SUPPORT = 'support'
 CREATE_PERS_DATA = 'create_pers_data'
 EDIT_PERS_DATA = 'edit_pers_data'
@@ -149,12 +151,6 @@ def get_flight_btn_text(flight: Flight, with_date):
     return text
 
 
-def get_pay_button(cost, payment_url):
-    reply_markup = types.InlineKeyboardMarkup()
-    reply_markup.add(types.InlineKeyboardButton(f'Оплатити: {cost}$', url=payment_url))
-    return reply_markup
-
-
 def get_luggage_menu(flight: Flight):
     reply_markup = types.InlineKeyboardMarkup()
     base = types.InlineKeyboardButton(f'Basic - {flight.cost_base}$', callback_data=f"{LUGGAGE}:BASE")
@@ -210,3 +206,13 @@ def get_random_available_seat(flight: FlightModel):
             result.append(seat)
     seat_index = random.randint(0, len(result) - 1)
     return result[seat_index]
+
+
+def get_tickets_buttons(tickets: list):
+    reply_markup = types.InlineKeyboardMarkup()
+    for ticket in tickets:
+        flight = FlightService.get_by_id(ticket.flight_id)
+        reply_markup.row(types.InlineKeyboardButton(f"{flight.departure} -> {flight.arrival}", callback_data=f"{TICKET}:{ticket.id}"))
+    reply_markup.row(types.InlineKeyboardButton('До головного меню◀️', callback_data=MAIN_MENU))
+    return reply_markup
+

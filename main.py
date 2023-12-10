@@ -2,9 +2,8 @@ import os
 import re
 import time
 
-import stripe
 import telebot
-from telebot.types import LabeledPrice, PreCheckoutQuery
+from telebot.types import LabeledPrice
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 
 import db.db_init as dbmanager
@@ -27,7 +26,8 @@ from util.utils import get_personal_data_menu, get_main_menu, START, HELP, MAIN_
     PRE_SAVE_EDIT_PERS_DATA, get_edit_personal_data_menu, EDIT_NAME, FIELD_NAME, EDIT_SURNAME, FIELD_SURNAME, \
     EDIT_PERS_GENDER, EDIT_GENDER_INTERNAL, FIELD_GENDER, EDIT_PHONE, FIELD_PHONE, EDIT_EMAIL, FIELD_EMAIL, \
     CHOOSE_FLIGHT, get_available_flights_menu, FLIGHT, get_luggage_menu, LUGGAGE, load_photo, get_random_available_seat, \
-    generate_seats, SEAT_PAG, CHOOSE_SEAT, get_pay_button, OCCUPIED, TICKETS
+    generate_seats, SEAT_PAG, CHOOSE_SEAT, OCCUPIED, TICKETS, get_tickets_buttons, \
+    get_simple_question_marcup
 
 # Ініціалізація телеграм бот об'єкту
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'), parse_mode='Markdown')
@@ -688,6 +688,22 @@ def got_payment(message):
                       "Залишайтеся на зв’язку.".format(
                          message.successful_payment.total_amount / 100, message.successful_payment.currency),
                      parse_mode='Markdown')
+
+
+@bot.message_handler(commands=[TICKETS])
+def tickets_handler(message):
+    tickets = UserTicketService.get_user_tickets(message.chat.id)
+    if tickets:
+        reply_marcup = get_tickets_buttons(tickets)
+        bot.send_message(message.chat.id, 'Оберіть квиток:', reply_markup=reply_marcup)
+    else:
+        bot.send_message(message.chat.id, 'На жаль, ви ще не придбали жодних квитків. Бажаєте обрати рейс?',
+                         reply_markup=get_simple_question_marcup(CHOOSE_FLIGHT, MAIN_MENU))
+
+
+@bot.callback_query_handler(func=lambda callback: callback.data == TICKETS)
+def tickets_callback(callback):
+    tickets_handler(callback.message)
 
 
 @bot.message_handler(commands=[SUPPORT])

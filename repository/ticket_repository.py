@@ -11,7 +11,7 @@ class TicketRepository:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
 
-        cursor.execute(f'INSERT INTO ticket(flightId, planeId, seatId) '
+        cursor.execute(f'INSERT INTO ticket (flightId, planeId, seatId) '
                        f'VALUES (?, ?, ?)',
                        (ticket.flight_id, ticket.plane_id, ticket.seat_id))
 
@@ -21,3 +21,15 @@ class TicketRepository:
         cursor.close()
         conn.close()
         return id
+
+    @staticmethod
+    def get_ticket(ticket_id):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        cursor.execute(f'SELECT * FROM ticket WHERE id={ticket_id}')
+        ticket = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+        return Ticket.from_tuple(ticket)
