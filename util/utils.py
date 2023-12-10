@@ -103,7 +103,6 @@ def get_personal_data_menu(has_personal_data):
 def get_main_menu():
     reply_markup = types.InlineKeyboardMarkup()
     choose = types.InlineKeyboardButton('Обрати рейс✈️', callback_data=CHOOSE_FLIGHT)
-    # ticket_refund = types.InlineKeyboardButton('Повернути квиток↩️', callback_data='/ticket_refund')
     tickets = types.InlineKeyboardButton('Мої квитки🎫', callback_data=TICKETS)
     pers_data = types.InlineKeyboardButton('Персональні дані📁', callback_data=PERSONAL_DATA_MENU)
     support = types.InlineKeyboardButton('Підтримка📞', callback_data=SUPPORT)

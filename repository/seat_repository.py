@@ -36,3 +36,15 @@ class SeatRepository:
         cursor.close()
         conn.close()
         return id
+
+    @staticmethod
+    def get_by_id(seat_id):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        cursor.execute(f'SELECT * FROM seat WHERE id={seat_id}')
+        seat = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+        return Seat.from_tuple(seat)

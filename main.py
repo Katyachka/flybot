@@ -9,6 +9,7 @@ from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 import db.db_init as dbmanager
 from models.Flight import Flight
 from models.Seat import Seat
+from models.SeatModel import SeatModel
 from models.Ticket import Ticket
 from models.User import User
 from models.UserInfo import UserInfo
@@ -27,7 +28,7 @@ from util.utils import get_personal_data_menu, get_main_menu, START, HELP, MAIN_
     EDIT_PERS_GENDER, EDIT_GENDER_INTERNAL, FIELD_GENDER, EDIT_PHONE, FIELD_PHONE, EDIT_EMAIL, FIELD_EMAIL, \
     CHOOSE_FLIGHT, get_available_flights_menu, FLIGHT, get_luggage_menu, LUGGAGE, load_photo, get_random_available_seat, \
     generate_seats, SEAT_PAG, CHOOSE_SEAT, OCCUPIED, TICKETS, get_tickets_buttons, \
-    get_simple_question_marcup
+    get_simple_question_marcup, TICKET
 
 # Ініціалізація телеграм бот об'єкту
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'), parse_mode='Markdown')
@@ -627,14 +628,8 @@ def show_pre_buy_data(message):
 
     flight = chat_cache.get_flight(message.chat.id)
     bot.send_message(message.chat.id, "Перегляд бронювання:\n")
-    bot.send_message(message.chat.id, f"Рейс: {flight.departure} -> {flight.arrival}\n\n"
-                                      f"Дата та час відправлення: {flight.departure_date_time.strftime("%d.%m.%Y %H:%M")}\n"
-                                      f"Дата та час прибуття: {flight.arrival_date_time.strftime("%d.%m.%Y %H:%M")}\n"
-                                      f"Тривалість польоту: {flight.duration} год.\n\n"
-                                      f"Літак: {flight.plane.model}\n\n")
-
-    bot.send_photo(message.chat.id, load_photo(flight.plane.layout))
-
+    seat_model = SeatModel(number=seat.number, luggage_regular=seat.luggage_regular,
+                               luggage_plus=seat.luggage_plus, flight=flight)
     luggage = 'Ручна поклажа'
     cost = flight.cost_base
 
@@ -646,9 +641,7 @@ def show_pre_buy_data(message):
         luggage = '1 маленька сумка + 20 кг багаж'
         cost += flight.cost_plus
 
-    bot.send_message(message.chat.id, f"Ваше місце: {seat.number}\n"
-                                      f"Багаж: {luggage}")
-    see_personal_data(message)
+    show_ticket_info(seat_model, message)
 
     bot.send_invoice(message.chat.id,
                      title='Оплата квитків',
@@ -704,6 +697,39 @@ def tickets_handler(message):
 @bot.callback_query_handler(func=lambda callback: callback.data == TICKETS)
 def tickets_callback(callback):
     tickets_handler(callback.message)
+
+
+@bot.callback_query_handler(func=lambda callback: callback.data.startswith(TICKET))
+def ticket_callback(callback):
+    ticket_id = get_param_from_command(callback.data)
+    ticket = TicketService.get_ticket(ticket_id)
+    seat = SeatService.get_by_id(ticket.seat_id)
+    show_ticket_info(seat, callback.message)
+
+
+def show_ticket_info(seat, message):
+    bot.send_message(message.chat.id, f"Рейс: {seat.flight.departure} -> {seat.flight.arrival}\n\n"
+                                      f"Дата та час відправлення: {seat.flight.departure_date_time.strftime("%d.%m.%Y %H:%M")}\n"
+                                      f"Дата та час прибуття: {seat.flight.arrival_date_time.strftime("%d.%m.%Y %H:%M")}\n"
+                                      f"Тривалість польоту: {seat.flight.duration} год.\n\n"
+                                      f"Літак: {seat.flight.plane.model}\n\n")
+
+    bot.send_photo(message.chat.id, load_photo(seat.flight.plane.layout))
+
+    luggage = 'Ручна поклажа'
+    cost = seat.flight.cost_base
+
+    if seat.luggage_regular:
+        luggage = '2 сумки ручної поклажі (1 сумка ручної поклажі та одна маленька сумка)'
+        cost += seat.flight.cost_regular
+
+    if seat.luggage_plus:
+        luggage = '1 маленька сумка + 20 кг багаж'
+        cost += seat.flight.cost_plus
+
+    bot.send_message(message.chat.id, f"Ваше місце: {seat.number}\n"
+                                      f"Багаж: {luggage}")
+    see_personal_data(message)
 
 
 @bot.message_handler(commands=[SUPPORT])

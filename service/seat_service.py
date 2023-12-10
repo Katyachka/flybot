@@ -42,3 +42,7 @@ class SeatService:
     @staticmethod
     def create_seat(seat: Seat):
         return SeatRepository.create_seat(seat)
+
+    @staticmethod
+    def get_by_id(seat_id):
+        return SeatService.convert_to_model(SeatRepository.get_by_id(seat_id))
