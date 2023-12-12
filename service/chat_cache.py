@@ -8,6 +8,7 @@ class ChatCache:
         self.flights_cache = {}
         self.seats_cache = {}
         self.choose_seat_pagination_state = {}
+        self.temp_info = {}
 
     def put_pers_data(self, chat_id, value):
         self.personal_data_cache[chat_id] = value
@@ -53,3 +54,9 @@ class ChatCache:
 
     def get_chs_seat_pag_state(self, chat_id):
         return self.choose_seat_pagination_state[chat_id]
+
+    def put_temp_info(self, chat_id, temp_info):
+        self.temp_info[chat_id] = temp_info
+
+    def get_temp_info(self, chat_id):
+        return self.temp_info[chat_id]

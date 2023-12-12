@@ -37,6 +37,8 @@ LUGGAGE = 'luggage'
 CHOOSE_SEAT = 'choose_seat'
 SEAT_PAG = "pag_seats"
 PAY = "pay"
+NEXT_MENU = 'next_menu'
+
 
 CMD = 'cmd'
 DATA = 'data'
@@ -78,6 +80,14 @@ def get_save_pers_data_menu():
     cancel = types.InlineKeyboardButton('Відмінити❌', callback_data=MAIN_MENU)
     reply_markup.row(save, edit)
     reply_markup.row(cancel)
+    return reply_markup
+
+
+def get_temp_save_pers_data_menu():
+    reply_markup = types.InlineKeyboardMarkup()
+    next_menu = types.InlineKeyboardButton('Далі➡️', callback_data=NEXT_MENU)
+    edit = types.InlineKeyboardButton('Редагувати✍️', callback_data=EDIT_PERS_DATA)
+    reply_markup.row(next_menu, edit)
     return reply_markup
 
 

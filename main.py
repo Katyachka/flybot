@@ -29,7 +29,7 @@ from util.utils import get_personal_data_menu, get_main_menu, START, HELP, MAIN_
     EDIT_PERS_GENDER, EDIT_GENDER_INTERNAL, FIELD_GENDER, EDIT_PHONE, FIELD_PHONE, EDIT_EMAIL, FIELD_EMAIL, \
     CHOOSE_FLIGHT, get_available_flights_menu, FLIGHT, get_luggage_menu, LUGGAGE, load_photo, get_random_available_seat, \
     generate_seats, SEAT_PAG, CHOOSE_SEAT, OCCUPIED, TICKETS, get_tickets_buttons, \
-    get_simple_question_marcup, TICKET
+    get_simple_question_marcup, TICKET, get_temp_save_pers_data_menu, NEXT_MENU
 
 # Ініціалізація телеграм бот об'єкту
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'), parse_mode='Markdown')
@@ -99,12 +99,16 @@ def personal_data_callback(callback):
     personal_data_menu(callback.message)
 
 
+def create_pers_data_handler(message):
+    bot.send_message(message.chat.id, 'Оберіть, будь ласка, стать:',
+                     reply_markup=get_simple_question_marcup_with_text(EDIT_GENDER + ":M", 'Чоловіча👨‍💼',
+                                                                       EDIT_GENDER + ":F", 'Жіноча👩‍💼'))
+
+
 # Повертає повідомлення з кнопками вибору статі
 @bot.callback_query_handler(func=lambda callback: callback.data == CREATE_PERS_DATA)
 def create_pers_data_callback(callback):
-    bot.send_message(callback.message.chat.id, 'Оберіть, будь ласка, стать:',
-                     reply_markup=get_simple_question_marcup_with_text(EDIT_GENDER + ":M", 'Чоловіча👨‍💼',
-                                                                       EDIT_GENDER + ":F", 'Жіноча👩‍💼'))
+    create_pers_data_handler(callback.message)
 
 
 #
@@ -206,7 +210,13 @@ def on_enter_email(message):
                                           f"*Стать*: {GENDER[user_info.gender]}\n\n"
                                           f"*Номер телефону*: {user_info.phone}\n"
                                           f"*Email*: {user_info.email}")
-        bot.send_message(message.chat.id, 'Оберіть дію: ', reply_markup=get_save_pers_data_menu())
+        try:
+            if chat_cache.get_temp_info(message.chat.id):
+                bot.send_message(message.chat.id, 'Оберіть дію: ', reply_markup=get_temp_save_pers_data_menu())
+            else:
+                raise Exception()
+        except Exception as e:
+            bot.send_message(message.chat.id, 'Оберіть дію: ', reply_markup=get_save_pers_data_menu())
     else:
         bot.send_message(message.chat.id, 'Не валідний email. Спробуйте, будь ласка, ще раз:')
         bot.clear_step_handler_by_chat_id(message.chat.id)
@@ -237,12 +247,13 @@ def save_pers_info_callback(callback):
 
 @bot.callback_query_handler(func=lambda callback: callback.data == SEE_PERS_DATA)
 def see_personal_data_callback(callback):
-    see_personal_data(callback.message)
+    see_personal_data(callback.message, None)
 
 
-def see_personal_data(message):
+def see_personal_data(message, user_info):
     try:
-        user_info = chat_cache.get_pers_data(message.chat.id)
+        if user_info is None:
+            user_info = chat_cache.get_pers_data(message.chat.id)
     except:
         user_info = UserInfoService.get_user_info_by_user_id(message.chat.id)
     return bot.send_message(message.chat.id, "*Ваші персональні дані:*\n\n"
@@ -255,7 +266,7 @@ def see_personal_data(message):
 
 def edit_personal_data(message, show, is_user_saved):
     if show:
-        message_sent = see_personal_data(message)
+        message_sent = see_personal_data(message, None)
         chat_cache.put_msg_to_edit(message.chat.id, message_sent.message_id)
     chat_cache.put_msg_to_del(message.chat.id, [])
     to_delete = bot.send_message(message.chat.id, 'Оберіть дані, які хочете редагувати:',
@@ -622,8 +633,8 @@ def choose_seat_callback(callback):
         seat.user_info_id = user.user_info_id
         show_pre_buy_data(callback.message)
     else:
-
-        bot.send_message(callback.message.chat.id, 'Hello mather-fucker')
+        chat_cache.put_temp_info(callback.message.chat.id, True)
+        create_pers_data_handler(callback.message)
 
     chat_cache.put_seat(callback.message.chat.id, seat)
 
@@ -659,6 +670,11 @@ def show_pre_buy_data(message):
                      invoice_payload='FlyBot')
 
 
+@bot.callback_query_handler(func=lambda callback: callback.data == NEXT_MENU)
+def next_menu_callback(callback):
+    show_pre_buy_data(callback.message)
+
+
 @bot.pre_checkout_query_handler(func=lambda query: True)
 def checkout(pre_checkout_query):
     bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True,
@@ -670,9 +686,22 @@ def checkout(pre_checkout_query):
 def got_payment(message):
     seat = chat_cache.get_seat(message.chat.id)
     flight = chat_cache.get_flight(message.chat.id)
-    seat.id = SeatService.create_seat(seat)
+
+    try:
+        if chat_cache.get_temp_info(message.chat.id):
+            user_info = chat_cache.get_pers_data(message.chat.id)
+            id = UserInfoService.create_user(user_info)
+            chat_cache.rem_pers_data(message.chat.id)
+            seat.user_info_id = id
+            seat.id = SeatService.create_seat(seat)
+        else:
+            raise Exception()
+    except Exception as e:
+        seat.id = SeatService.create_seat(seat)
+        user_info = UserInfoService.get_user_by_id(seat.user_info_id)
+
     ticket = Ticket(plane_id=flight.plane.id, flight_id=flight.id, seat_id=seat.id, reserve_number=uuid.uuid4())
-    user_info = UserInfoService.get_user_by_id(seat.user_info_id)
+
     ticket.id = TicketService.create_ticket(ticket)
     user = UserService.get_user_by_id(message.chat.id)
     UserTicketService.create_user_ticket(user, ticket)
@@ -681,6 +710,7 @@ def got_payment(message):
     chat_cache.put_flight(message.chat.id, None)
     chat_cache.put_chs_seat_pag_state(message.chat.id, None)
     chat_cache.put_msg_to_edit(message.chat.id, None)
+    chat_cache.put_temp_info(message.chat.id, None)
 
     bot.send_message(message.chat.id,
                      "Дякуємо за оплату! Ваше замовлення на `{} {}` успішно оплачено!".format(
@@ -752,7 +782,7 @@ def show_ticket_info(seat, message):
 
     bot.send_message(message.chat.id, f"Ваше місце: {seat.number}\n"
                                       f"Багаж: {luggage}")
-    see_personal_data(message)
+    see_personal_data(message, seat.user_info)
 
 
 @bot.message_handler(commands=[SUPPORT])
