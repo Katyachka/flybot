@@ -9,6 +9,10 @@ class UserService:
     def create_user(user: User):
         UserRepository.create_user(user)
 
+    @staticmethod
+    def exists(user_id):
+        return UserService.get_user_by_id(user_id) is not None
+
     # Отримання даних з таблиці users
     @staticmethod
     def get_user_by_id(user_id):

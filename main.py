@@ -55,8 +55,10 @@ GENDER = {
 def send_welcome(message):
     bot.send_message(message.chat.id, f'{message.chat.first_name}, вітаємо Вас у Flying бот. Цей бот допоможе Вам '
                                       f'придбати авіаквитки✈️')
-    user = User(id=message.chat.id, save_info=False)
-    UserService.create_user(user)
+    if not UserService.exists(message.chat.id):
+        user = User(id=message.chat.id, save_info=False)
+        UserService.create_user(user)
+
     main_menu(message)
 
 
@@ -83,8 +85,8 @@ def main_menu_callback(callback):
 # Пропонує зберегти персональні дані або показує меню персональних даних
 @bot.message_handler(commands=[PERSONAL_DATA_MENU])
 def personal_data_menu(message):
-    user = UserService.get_user_by_id(message.chat.id)
-    if user is not None and user.save_info:
+    user = UserService.get_user_by_id(message.chat.id)    # отримати інформацію про user з бази даних
+    if user is not None and user.save_info:               # якщо інф-ція про юзера є в базі і його перс дані збережені, то виконується перше
         bot.send_message(message.chat.id, 'Оберіть дію з персональними даними:',
                          reply_markup=get_personal_data_menu(True))
     else:
@@ -227,7 +229,7 @@ def on_enter_email(message):
 def pre_save_menu_handler(callback):
     bot.send_message(callback.message.chat.id, 'Оберіть дію: ', reply_markup=get_save_pers_data_menu())
 
-
+# Збереження персональних даних usera
 @bot.callback_query_handler(func=lambda callback: callback.data == SAVE_PERS_DATA)
 def save_pers_info_callback(callback):
     try:

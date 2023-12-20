@@ -34,16 +34,16 @@ arrival = {
 }
 
 departure_date_time = {
-    1: datetime(year=2023, month=12, day=16, hour=12, minute=15),
-    2: datetime(year=2023, month=12, day=18, hour=8, minute=10),
-    3: datetime(year=2023, month=12, day=17, hour=6, minute=00),
-    4: datetime(year=2023, month=12, day=20, hour=17, minute=30),
-    5: datetime(year=2023, month=12, day=24, hour=14, minute=00),
-    6: datetime(year=2023, month=12, day=25, hour=11, minute=10),
-    7: datetime(year=2023, month=12, day=26, hour=20, minute=20),
-    8: datetime(year=2023, month=12, day=27, hour=8, minute=00),
-    9: datetime(year=2023, month=12, day=28, hour=7, minute=45),
-    10: datetime(year=2023, month=12, day=29, hour=18, minute=35),
+    1: datetime(year=2023, month=12, day=21, hour=12, minute=15),
+    2: datetime(year=2023, month=12, day=22, hour=8, minute=10),
+    3: datetime(year=2023, month=12, day=23, hour=6, minute=00),
+    4: datetime(year=2023, month=12, day=24, hour=17, minute=30),
+    5: datetime(year=2023, month=12, day=25, hour=14, minute=00),
+    6: datetime(year=2023, month=12, day=26, hour=11, minute=10),
+    7: datetime(year=2023, month=12, day=27, hour=20, minute=20),
+    8: datetime(year=2023, month=12, day=28, hour=8, minute=00),
+    9: datetime(year=2023, month=12, day=29, hour=7, minute=45),
+    10: datetime(year=2023, month=12, day=30, hour=18, minute=35),
 }
 
 duration = {
